@@ -57,19 +57,23 @@ export default function Home() {
     }, []);
 
     const fetchMarkers = async () => {
-        try {
-            const response = await API.get('/markers');
-            // Si l'API fonctionne, décommente la ligne suivante :
-            // setMarkers(response.data);
-        } catch (err) {
-            console.error("Erreur de chargement des marqueurs", err);
-            if (err.response && err.response.status === 401) {
-                localStorage.clear();
-                window.location.reload();
-            }
+    try {
+        const response = await API.get('/markers');
+        // Si le serveur répond avec un tableau, on l'utilise
+        if (response.data && Array.isArray(response.data)) {
+            setMarkers(response.data);
+        } else {
+            setMarkers([]); // Évite le plantage si la structure est incorrecte
         }
-    };
-
+    } catch (error) {
+        console.error("Erreur de récupération des marqueurs, chargement du mode secours :", error);
+        
+        // --- SÉCURITÉ ÉCRAN NOIR ---
+        // Si le serveur en ligne est vide ou indisponible, on met un tableau vide 
+        // ou tes marqueurs locaux par défaut pour que la carte s'affiche quand même !
+        setMarkers([]); 
+    }
+};
     const MapClickHandler = () => {
         useMapEvents({
             click(e) {
@@ -202,19 +206,19 @@ export default function Home() {
                     />
                     <MapClickHandler />
                     
-                    {filteredMarkers.map((marker) => (
-                        <Marker key={marker.id} position={[marker.latitude, marker.longitude]}>
-                            <Popup>
-                                <div style={{ minWidth: '160px', color: '#333' }}>
-                                    <h4 style={{ margin: '0 0 5px 0', color: '#007bff' }}>{marker.titre}</h4>
-                                    <span style={styles.badge}>{marker.categorie}</span>
-                                    <p style={{ margin: '8px 0', fontSize: '13px' }}>{marker.description}</p>
-                                    <small style={{ color: '#666' }}>👤 {marker.user?.prenom} {marker.user?.nom}</small><br/>
-                                    <small style={{ color: '#666' }}>📞 {marker.contact}</small>
-                                </div>
-                            </Popup>
-                        </Marker>
-                    ))}
+                    {filteredMarkers && filteredMarkers.map((marker) => (
+    <Marker key={marker.id} position={[marker.latitude, marker.longitude]}>
+        <Popup>
+            <div style={{ minWidth: '160px', color: '#333' }}>
+                <h4 style={{ margin: '0 0 5px 0', color: '#007bff' }}>{marker.titre}</h4>
+                <span style={styles.badge}>{marker.categorie}</span>
+                <p style={{ margin: '8px 0', fontSize: '13px' }}>{marker.description}</p>
+                <small style={{ color: '#666' }}>👤 {marker.user?.prenom} {marker.user?.nom}</small><br/>
+                <small style={{ color: '#666' }}>📞 {marker.contact}</small>
+            </div>
+        </Popup>
+    </Marker>
+))}
                 </MapContainer>
             </div>
 
