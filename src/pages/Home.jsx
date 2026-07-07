@@ -144,14 +144,14 @@ export default function Home() {
             
             {/* BOUTON BURGER POUR LES TÉLÉPHONES */}
             <button 
-                onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
-                style={{
-                    ...styles.toggleSidebarBtn, 
-                    left: isSidebarOpen && window.innerWidth > 600 ? '310px' : '15px'
-                }}
-            >
-                {isSidebarOpen ? '✖' : '☰'}
-            </button>
+    onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
+    style={{
+        ...styles.toggleSidebarBtn, 
+        left: isSidebarOpen ? '310px' : '15px' // Plus simple et sans bug d'écran !
+    }}
+>
+    {isSidebarOpen ? '✖' : '☰'}
+</button>
 
             {/* PANNEAU FLOTTANT BLANC DE SÉLECTION */}
             {isSidebarOpen && (
