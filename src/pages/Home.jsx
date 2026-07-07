@@ -51,9 +51,9 @@ export default function Home() {
 
     useEffect(() => {
         // fetchMarkers(); 
-        if (window.innerWidth < 600) {
+        /*if (window.innerWidth < 600) {
             setIsSidebarOpen(false);
-        }
+        }*/
     }, []);
 
     const fetchMarkers = async () => {
