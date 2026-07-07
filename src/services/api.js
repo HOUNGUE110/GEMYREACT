@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Configuration de l'URL de base de ton API Laravel
 const API = axios.create({
-    baseURL: 'http://127.0.0.1:8000/api',
+    baseURL: 'https://gemylaravel.onrender.com',
     headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
