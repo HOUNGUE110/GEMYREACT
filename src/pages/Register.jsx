@@ -40,7 +40,7 @@ export default function Register() {
         localStorage.setItem('user', JSON.stringify(fakeUser));
         
         // On redirige de force vers la carte
-        navigate('/map'); 
+        navigate('/'); 
     }
 };
 
