@@ -109,3 +109,18 @@ code {
   padding: 4px 8px;
   background: var(--code-bg);
 }
+
+/* S'assurer que le body et le conteneur React prennent tout l'écran */
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+/* Le conteneur Leaflet doit forcer la largeur */
+.leaflet-container {
+  width: 100% !important;
+  height: 100vh !important; /* ou 100% selon ton design */
+}
