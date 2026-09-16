@@ -9,7 +9,8 @@ export default function Register() {
         prenom: '',
         email: '',
         telephone: '',
-        password: ''
+        password: '',
+        password_confirmation: ''
     });
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
@@ -24,19 +25,20 @@ export default function Register() {
         setError('');
 
         try {
-            // Concaténation de nom + prénom si ton API Laravel attend un champ "name"
+            // Payload envoyant les formats attendus (name complet + nom/prenom séparés)
             const payload = {
                 name: `${formData.prenom} ${formData.nom}`.trim(),
                 nom: formData.nom,
                 prenom: formData.prenom,
                 email: formData.email,
                 telephone: formData.telephone,
-                password: formData.password
+                password: formData.password,
+                password_confirmation: formData.password_confirmation || formData.password
             };
 
             const response = await API.post('/register', payload);
 
-            // Harmonisation avec gemy_token et gemy_user
+            // Stockage harmonisé dans le localStorage
             const token = response.data.access_token || response.data.token;
             const user = response.data.user;
 
@@ -45,8 +47,16 @@ export default function Register() {
             
             navigate('/');
         } catch (err) {
-            console.error("Erreur inscription :", err);
-            setError(err.response?.data?.message || "Erreur lors de la création du compte.");
+            console.error("Erreur complète API :", err.response);
+            
+            // Capture et affichage du premier message de validation de Laravel (HTTP 422)
+            if (err.response?.status === 422 && err.response.data.errors) {
+                const firstErrorKey = Object.keys(err.response.data.errors)[0];
+                const firstErrorMessage = err.response.data.errors[firstErrorKey][0];
+                setError(`${firstErrorKey.toUpperCase()}: ${firstErrorMessage}`);
+            } else {
+                setError(err.response?.data?.message || "Erreur lors de la création du compte.");
+            }
         } finally {
             setLoading(false);
         }
