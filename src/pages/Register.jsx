@@ -19,30 +19,38 @@ export default function Register() {
     };
 
     const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-        // Ta requête actuelle vers l'API
-        const response = await API.post('/register', formData);
-        // Si ça marche, on stocke le token
-        localStorage.setItem('token', response.data.token);
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-        navigate('/map'); // Ou ta page de carte
-    } catch (error) {
-        console.log("Mode secours activé : Connexion locale");
-        
-        // --- INJECTION DE SECOURS ---
-        // On crée un faux utilisateur local pour que le prof ou toi puissiez tester l'appli sans blocage
-        const fakeUser = {
-            name: formData.nom || "Utilisateur Gemy",
-            email: formData.email
-        };
-        localStorage.setItem('token', 'fake-session-token-gemy');
-        localStorage.setItem('user', JSON.stringify(fakeUser));
-        
-        // On redirige de force vers la carte
-        navigate('/'); 
-    }
-};
+        e.preventDefault();
+        setLoading(true);
+        setError('');
+
+        try {
+            // Concaténation de nom + prénom si ton API Laravel attend un champ "name"
+            const payload = {
+                name: `${formData.prenom} ${formData.nom}`.trim(),
+                nom: formData.nom,
+                prenom: formData.prenom,
+                email: formData.email,
+                telephone: formData.telephone,
+                password: formData.password
+            };
+
+            const response = await API.post('/register', payload);
+
+            // Harmonisation avec gemy_token et gemy_user
+            const token = response.data.access_token || response.data.token;
+            const user = response.data.user;
+
+            localStorage.setItem('gemy_token', token);
+            localStorage.setItem('gemy_user', JSON.stringify(user));
+            
+            navigate('/');
+        } catch (err) {
+            console.error("Erreur inscription :", err);
+            setError(err.response?.data?.message || "Erreur lors de la création du compte.");
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <div style={styles.container}>
@@ -95,8 +103,8 @@ const styles = {
     form: { display: 'flex', flexDirection: 'column' },
     row: { display: 'flex', gap: '10px', marginBottom: '0' },
     label: { fontSize: '13px', fontWeight: '600', color: '#334155', marginTop: '10px', marginBottom: '4px' },
-    input: { width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box', fontSize: '14px', transition: 'border 0.2s' },
-    submitBtn: { width: '100%', padding: '12px', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '16px', marginTop: '20px', transition: 'background-color 0.2s' },
+    input: { width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box', fontSize: '14px' },
+    submitBtn: { width: '100%', padding: '12px', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '16px', marginTop: '20px' },
     footerText: { fontSize: '14px', color: '#64748b', textAlign: 'center', marginTop: '20px', margin: '20px 0 0 0' },
     link: { color: '#007bff', fontWeight: 'bold', cursor: 'pointer', textDecoration: 'underline' }
 };

@@ -12,16 +12,21 @@ export default function Login() {
     };
 
     const handleSubmit = async (e) => {
-        e.preventDefault();
-        try {
-            const response = await API.post('/login', credentials);
-            localStorage.setItem('gemy_token', response.data.access_token);
-            localStorage.setItem('gemy_user', JSON.stringify(response.data.user));
-            navigate('/');
-        } catch (err) {
-            setError(err.response?.data?.message || 'Identifiants incorrects ou erreur serveur.');
-        }
-    };
+    e.preventDefault();
+    setError('');
+    try {
+        const response = await API.post('/login', credentials);
+        const token = response.data.access_token || response.data.token;
+        const user = response.data.user;
+
+        localStorage.setItem('gemy_token', token);
+        localStorage.setItem('gemy_user', JSON.stringify(user));
+        
+        navigate('/');
+    } catch (err) {
+        setError(err.response?.data?.message || 'Identifiants incorrects ou erreur serveur.');
+    }
+};
 
     return (
         <div style={styles.container}>
