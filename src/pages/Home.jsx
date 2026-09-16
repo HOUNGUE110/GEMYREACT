@@ -7,6 +7,7 @@ import API from '../services/api.js';
 // Correction icône Leaflet
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
+
 let DefaultIcon = L.icon({
     iconUrl: icon,
     shadowUrl: iconShadow,
@@ -22,23 +23,8 @@ export default function Home() {
     // Coordonnées de Notsé
     const centerNotse = [6.9510, 1.1680];
 
-    // État pour gérer l'ouverture/fermeture du conteneur de tri
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-
-    // Liste des marqueurs avec un point de test par défaut
-    const [markers, setMarkers] = useState([
-        {
-            id: 'fake-id-notse-test',
-            titre: "📍 Point de Test à Notsé",
-            categorie: "Entraide",
-            description: "Marqueur de test à Notsé.",
-            latitude: 6.9510, 
-            longitude: 1.1680,
-            contact: "90000000",
-            user: { prenom: "Test", nom: "Notsé" }
-        }
-    ]);
-    
+    const [markers, setMarkers] = useState([]);
     const [filter, setFilter] = useState('Tous');
     const [modalOpen, setModalOpen] = useState(false);
     const [clickCoords, setClickCoords] = useState({ lat: 0, lng: 0 });
@@ -46,34 +32,32 @@ export default function Home() {
         titre: '',
         description: '',
         categorie: 'Entraide',
-        contact: user ? user.telephone : ''
+        contact: user ? user.telephone || '' : ''
     });
 
     useEffect(() => {
-         fetchMarkers(); 
+        fetchMarkers(); 
         if (window.innerWidth < 600) {
             setIsSidebarOpen(false);
         }
     }, []);
 
     const fetchMarkers = async () => {
-    try {
-        const response = await API.get('/markers');
-        // Si le serveur répond avec un tableau, on l'utilise
-        if (response.data && Array.isArray(response.data)) {
-            setMarkers(response.data);
-        } else {
-            setMarkers([]); // Évite le plantage si la structure est incorrecte
+        try {
+            const response = await API.get('/markers');
+            if (response.data && Array.isArray(response.data)) {
+                setMarkers(response.data);
+            } else if (response.data && Array.isArray(response.data.markers)) {
+                setMarkers(response.data.markers);
+            } else {
+                setMarkers([]);
+            }
+        } catch (error) {
+            console.error("Erreur de récupération des marqueurs :", error);
+            setMarkers([]); 
         }
-    } catch (error) {
-        console.error("Erreur de récupération des marqueurs, chargement du mode secours :", error);
-        
-        // --- SÉCURITÉ ÉCRAN NOIR ---
-        // Si le serveur en ligne est vide ou indisponible, on met un tableau vide 
-        // ou tes marqueurs locaux par défaut pour que la carte s'affiche quand même !
-        setMarkers([]); 
-    }
-};
+    };
+
     const MapClickHandler = () => {
         useMapEvents({
             click(e) {
@@ -93,60 +77,65 @@ export default function Home() {
         setNewMarker({ ...newMarker, [e.target.name]: e.target.value });
     };
 
-    // ====== LA FONCTION DE PUBLICATION MODIFIÉE POUR LE RENDU EXPRESS ======
     const handleSubmitMarker = async (e) => {
-    e.preventDefault();
-    try {
-        // Envoi à l'API Laravel
-        const response = await API.post('/markers', {
-            ...newMarker,
-            latitude: clickCoords.lat,
-            longitude: clickCoords.lng
-        });
+        e.preventDefault();
+        try {
+            const response = await API.post('/markers', {
+                ...newMarker,
+                latitude: clickCoords.lat,
+                longitude: clickCoords.lng
+            });
 
-        // Extraction du marqueur retourné par Laravel (avec son vrai ID et la relation user)
-        const createdMarker = response.data.marker;
+            // Récupération flexible de l'objet créé
+            const createdMarker = response.data.marker || response.data;
 
-        // Mise à jour immédiate de la carte
-        setMarkers((prevMarkers) => [createdMarker, ...prevMarkers]);
+            if (createdMarker && (createdMarker.id || createdMarker.latitude)) {
+                setMarkers((prevMarkers) => [createdMarker, ...prevMarkers]);
+            } else {
+                // Rechargement complet en cas de doute
+                await fetchMarkers();
+            }
 
-        // Fermeture et réinitialisation de la modale
-        setModalOpen(false);
-        setNewMarker({ 
-            titre: '', 
-            description: '', 
-            categorie: 'Entraide', 
-            contact: user ? user.telephone : '' 
-        });
+            setModalOpen(false);
+            setNewMarker({ 
+                titre: '', 
+                description: '', 
+                categorie: 'Entraide', 
+                contact: user ? user.telephone || '' : '' 
+            });
 
-    } catch (err) {
-        console.error("Erreur lors de l'enregistrement du marqueur :", err.response?.data);
-        alert(err.response?.data?.message || "Impossible d'enregistrer l'événement sur le serveur.");
-    }
-};
+        } catch (err) {
+            console.error("Erreur lors de l'enregistrement du marqueur :", err.response?.data);
+            alert(err.response?.data?.message || "Impossible d'enregistrer l'événement sur le serveur.");
+        }
+    };
 
     const handleLogout = () => {
         localStorage.clear();
         window.location.reload();
     };
 
-    const filteredMarkers = markers.filter(m => filter === 'Tous' || m.categorie === filter);
+    // Filtrage avec sécurisation des types
+    const filteredMarkers = markers.filter(m => {
+        const isCorrectCategory = filter === 'Tous' || m.categorie === filter;
+        const hasValidCoords = !isNaN(Number(m.latitude)) && !isNaN(Number(m.longitude));
+        return isCorrectCategory && hasValidCoords;
+    });
 
     return (
         <div style={styles.container}>
-            
-            {/* BOUTON BURGER POUR LES TÉLÉPHONES */}
+            {/* BOUTON BURGER */}
             <button 
-    onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
-    style={{
-        ...styles.toggleSidebarBtn, 
-        left: isSidebarOpen ? '310px' : '15px' // Plus simple et sans bug d'écran !
-    }}
->
-    {isSidebarOpen ? '✖' : '☰'}
-</button>
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
+                style={{
+                    ...styles.toggleSidebarBtn, 
+                    left: isSidebarOpen ? '310px' : '15px'
+                }}
+            >
+                {isSidebarOpen ? '✖' : '☰'}
+            </button>
 
-            {/* PANNEAU FLOTTANT BLANC DE SÉLECTION */}
+            {/* PANNEAU FLOTTANT */}
             {isSidebarOpen && (
                 <div style={styles.sidebarFloating}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
@@ -186,7 +175,7 @@ export default function Home() {
                 </div>
             )}
 
-            {/* CARTE INTERACTIVE INTERNATIONALE */}
+            {/* CARTE LEAFLET */}
             <div style={styles.mapContainer}>
                 <MapContainer center={centerNotse} zoom={13} style={{ height: '100%', width: '100%' }} zoomControl={false}>
                     <TileLayer
@@ -195,23 +184,26 @@ export default function Home() {
                     />
                     <MapClickHandler />
                     
-                    {filteredMarkers && filteredMarkers.map((marker) => (
-    <Marker key={marker.id} position={[marker.latitude, marker.longitude]}>
-        <Popup>
-            <div style={{ minWidth: '160px', color: '#333' }}>
-                <h4 style={{ margin: '0 0 5px 0', color: '#007bff' }}>{marker.titre}</h4>
-                <span style={styles.badge}>{marker.categorie}</span>
-                <p style={{ margin: '8px 0', fontSize: '13px' }}>{marker.description}</p>
-                <small style={{ color: '#666' }}>👤 {marker.user?.prenom} {marker.user?.nom}</small><br/>
-                <small style={{ color: '#666' }}>📞 {marker.contact}</small>
-            </div>
-        </Popup>
-    </Marker>
-))}
+                    {filteredMarkers.map((marker, index) => (
+                        <Marker 
+                            key={marker.id || marker.id_marker || `marker-${index}`} 
+                            position={[Number(marker.latitude), Number(marker.longitude)]}
+                        >
+                            <Popup>
+                                <div style={{ minWidth: '160px', color: '#333' }}>
+                                    <h4 style={{ margin: '0 0 5px 0', color: '#007bff' }}>{marker.titre}</h4>
+                                    <span style={styles.badge}>{marker.categorie}</span>
+                                    <p style={{ margin: '8px 0', fontSize: '13px' }}>{marker.description}</p>
+                                    <small style={{ color: '#666' }}>👤 {marker.user?.prenom} {marker.user?.nom}</small><br/>
+                                    <small style={{ color: '#666' }}>📞 {marker.contact}</small>
+                                </div>
+                            </Popup>
+                        </Marker>
+                    ))}
                 </MapContainer>
             </div>
 
-            {/* MODALE D'AJOUT COMPATIBLE MOBILE */}
+            {/* MODALE */}
             {modalOpen && (
                 <div style={styles.modalOverlay}>
                     <form onSubmit={handleSubmitMarker} style={styles.modalContent}>
