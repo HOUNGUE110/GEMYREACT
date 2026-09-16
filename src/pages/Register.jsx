@@ -21,11 +21,17 @@ export default function Register() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setLoading(true);
         setError('');
 
+        // Vérification frontend de la correspondance des mots de passe
+        if (formData.password !== formData.password_confirmation) {
+            setError("Les mots de passe ne correspondent pas.");
+            return;
+        }
+
+        setLoading(true);
+
         try {
-            // Payload envoyant les formats attendus (name complet + nom/prenom séparés)
             const payload = {
                 name: `${formData.prenom} ${formData.nom}`.trim(),
                 nom: formData.nom,
@@ -33,12 +39,11 @@ export default function Register() {
                 email: formData.email,
                 telephone: formData.telephone,
                 password: formData.password,
-                password_confirmation: formData.password_confirmation || formData.password
+                password_confirmation: formData.password_confirmation
             };
 
             const response = await API.post('/register', payload);
 
-            // Stockage harmonisé dans le localStorage
             const token = response.data.access_token || response.data.token;
             const user = response.data.user;
 
@@ -49,7 +54,6 @@ export default function Register() {
         } catch (err) {
             console.error("Erreur complète API :", err.response);
             
-            // Capture et affichage du premier message de validation de Laravel (HTTP 422)
             if (err.response?.status === 422 && err.response.data.errors) {
                 const firstErrorKey = Object.keys(err.response.data.errors)[0];
                 const firstErrorMessage = err.response.data.errors[firstErrorKey][0];
@@ -90,6 +94,9 @@ export default function Register() {
 
                     <label style={styles.label}>Mot de passe</label>
                     <input type="password" name="password" placeholder="Minimum 6 caractères" value={formData.password} onChange={handleInputChange} required style={styles.input} />
+
+                    <label style={styles.label}>Confirmer le mot de passe</label>
+                    <input type="password" name="password_confirmation" placeholder="Répétez le mot de passe" value={formData.password_confirmation} onChange={handleInputChange} required style={styles.input} />
 
                     <button type="submit" disabled={loading} style={{...styles.submitBtn, backgroundColor: loading ? '#94a3b8' : '#22c55e'}}>
                         {loading ? "Création en cours..." : "Créer mon compte"}
