@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const API = axios.create({
-  baseURL: 'https://gemylaravel.onrender.com',
+  baseURL: 'https://gemylaravel.onrender.com/api',
 });
 
 API.interceptors.request.use((config) => {
