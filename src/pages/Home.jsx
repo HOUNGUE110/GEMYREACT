@@ -50,10 +50,10 @@ export default function Home() {
     });
 
     useEffect(() => {
-        // fetchMarkers(); 
-        /*if (window.innerWidth < 600) {
+         fetchMarkers(); 
+        if (window.innerWidth < 600) {
             setIsSidebarOpen(false);
-        }*/
+        }
     }, []);
 
     const fetchMarkers = async () => {
@@ -95,46 +95,35 @@ export default function Home() {
 
     // ====== LA FONCTION DE PUBLICATION MODIFIÉE POUR LE RENDU EXPRESS ======
     const handleSubmitMarker = async (e) => {
-        e.preventDefault();
-        try {
-            // 1. Création immédiate du marqueur local pour l'affichage React
-            const localNewMarker = {
-                id: 'local-' + Date.now(), 
-                titre: newMarker.titre,
-                categorie: newMarker.categorie,
-                description: newMarker.description,
-                latitude: clickCoords.lat,
-                longitude: clickCoords.lng,
-                contact: newMarker.contact,
-                user: {
-                    prenom: user ? user.prenom : "Moi",
-                    nom: user ? user.nom : ""
-                }
-            };
+    e.preventDefault();
+    try {
+        // Envoi à l'API Laravel
+        const response = await API.post('/markers', {
+            ...newMarker,
+            latitude: clickCoords.lat,
+            longitude: clickCoords.lng
+        });
 
-            // 2. Injection directe dans la carte pour éviter le blocage de l'alerte
-            setMarkers([localNewMarker, ...markers]);
-            
-            // 3. Tentative d'envoi en arrière-plan à Laravel (sans bloquer l'UI si ça échoue)
-            API.post('/markers', {
-                ...newMarker,
-                latitude: clickCoords.lat,
-                longitude: clickCoords.lng
-            }).catch(err => console.log("Sauvegarde BDD ignorée pour le rendu rapide"));
+        // Extraction du marqueur retourné par Laravel (avec son vrai ID et la relation user)
+        const createdMarker = response.data.marker;
 
-            // 4. Fermeture de la modale et réinitialisation
-            setModalOpen(false);
-            setNewMarker({ 
-                titre: '', 
-                description: '', 
-                categorie: 'Entraide', 
-                contact: user ? user.telephone : '' 
-            });
+        // Mise à jour immédiate de la carte
+        setMarkers((prevMarkers) => [createdMarker, ...prevMarkers]);
 
-        } catch (err) {
-            setModalOpen(false);
-        }
-    };
+        // Fermeture et réinitialisation de la modale
+        setModalOpen(false);
+        setNewMarker({ 
+            titre: '', 
+            description: '', 
+            categorie: 'Entraide', 
+            contact: user ? user.telephone : '' 
+        });
+
+    } catch (err) {
+        console.error("Erreur lors de l'enregistrement du marqueur :", err.response?.data);
+        alert(err.response?.data?.message || "Impossible d'enregistrer l'événement sur le serveur.");
+    }
+};
 
     const handleLogout = () => {
         localStorage.clear();
